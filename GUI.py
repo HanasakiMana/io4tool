@@ -1,19 +1,22 @@
 import tkinter as tk
 from tkinter import *
-import threading
-
+import os, sys
 from IO import IO4
 from const import *
 
 class GUI(object):
-    
 
     def __init__(self):
         self.window = Tk()
         self.window.title(appName)
         self.window.geometry(defaultSize) # size of window
         self.window.resizable(False, False)
-        self.window.iconbitmap('favicon.ico')
+
+        if getattr(sys, 'frozen', False): # whether is running in bundle
+            base_path = sys._MEIPASS
+        else:
+            base_path = os.path.abspath(".")
+        self.window.iconbitmap(os.path.join(base_path, 'favicon.ico'))
 
         self.inputFrame = Frame(self.window, width=600)
         self.outputFrame = Frame(self.window, width=600)
@@ -26,9 +29,9 @@ class GUI(object):
         self._initOutputGrid()
 
         self.io = IO4()
+        self.window.after(10, self._updateInputs)
 
     def _initVaribles(self):
-
         self.o1Val = BooleanVar()
         self.o2Val = BooleanVar()
         self.o3Val = BooleanVar()
@@ -58,6 +61,19 @@ class GUI(object):
             self.o11Val, self.o12Val, self.o13Val, self.o14Val, self.o15Val,
             self.o16Val, self.o17Val, self.o18Val, self.o19Val, self.o20Val
         ]
+
+    def _updateInputs(self):
+        self.io.readReport()
+        # digital inputs
+        for i in range(len(inputs)):
+            if self.io.buttons[inputs[i].byte] & (1 << inputs[i].shift):
+                self.indicators[i].itemconfigure('indicator', fill='red')
+            else:
+                self.indicators[i].itemconfigure('indicator', fill='gray')
+        # analog inputs
+        for i in range(len(self.adcs)):
+            self.adcs[i].configure(text=format(self.io.adcs[i*2] + (self.io.adcs[i*2+1] << 8), '04X'))
+        self.window.after(8, self._updateInputs)
     
     def _updateOutput(self):
         for i in range(len(self.outputVar)):
@@ -82,11 +98,11 @@ class GUI(object):
         frame = Frame(self.inputFrame)
         frame.pack(side='top')
 
-        title = Label(frame, text='INPUTs', font=("Arial", 25), pady=10)
+        title = Label(frame, text='INPUT', font=("Arial", 20), pady=10)
         title.grid(row=0, column=2)
         
         # 1P
-        title = Label(frame, text='1P', font=("Arial", 20), width=6)
+        title = Label(frame, text='1P', font=("Arial", 15), width=6)
         title.grid(row=1, column=0)
 
         self.i1 = self._createInputIndicator(frame, 1, 1, 'START')
@@ -105,7 +121,7 @@ class GUI(object):
         self.i31 = self._createInputIndicator(frame, 4, 4, 'PUSH 8')
 
         # 2P
-        title = Label(frame, text='2P', font=("Arial", 20), width=6)
+        title = Label(frame, text='2P', font=("Arial", 15), width=6)
         title.grid(row=5, column=0)
 
         self.i2 = self._createInputIndicator(frame, 5, 1, 'START')
@@ -124,7 +140,7 @@ class GUI(object):
         self.i32 = self._createInputIndicator(frame, 8, 4, 'PUSH 8')
 
         # System
-        title = Label(frame, text='System', font=("Arial", 20), width=6)
+        title = Label(frame, text='System', font=("Arial", 15), width=6)
         title.grid(row=9, column=0)
 
         self.i27 = self._createInputIndicator(frame, 9, 1, 'TEST')
@@ -132,25 +148,55 @@ class GUI(object):
         self.i29 = self._createInputIndicator(frame, 9, 3, 'COIN 1')
         self.i30 = self._createInputIndicator(frame, 9, 4, 'COIN 2')
 
-        
+        # create a array for all digital inputs
+        self.indicators = [
+            self.i1, self.i2, self.i3, self.i4, self.i5, self.i6, self.i7, self.i8,
+            self.i9, self.i10, self.i11, self.i12, self.i13, self.i14, self.i15, self.i16,
+            self.i17, self.i18, self.i19, self.i20, self.i21, self.i22, self.i23, self.i24,
+            self.i25, self.i26, self.i27, self.i28, self.i29, self.i30, self.i31, self.i32
+        ]
+
+        # ADCs
+        title = Label(frame, text='ADCs', font=("Arial", 15), width=6)
+        title.grid(row=10, column=0)
+
+        self.adc1 = Label(frame, text='', font=("Arial", 15))
+        self.adc1.grid(row=10, column=1)
+        self.adc2 = Label(frame, text='', font=("Arial", 15))
+        self.adc2.grid(row=10, column=2)
+        self.adc3 = Label(frame, text='', font=("Arial", 15))
+        self.adc3.grid(row=10, column=3)
+        self.adc4 = Label(frame, text='', font=("Arial", 15))
+        self.adc4.grid(row=10, column=4)
+        self.adc5 = Label(frame, text='', font=("Arial", 15))
+        self.adc5.grid(row=11, column=1)
+        self.adc6 = Label(frame, text='', font=("Arial", 15))
+        self.adc6.grid(row=11, column=2)
+        self.adc7 = Label(frame, text='', font=("Arial", 15))
+        self.adc7.grid(row=11, column=3)
+        self.adc8 = Label(frame, text='', font=("Arial", 15))
+        self.adc8.grid(row=11, column=4)
+
+        self.adcs = [
+            self.adc1, self.adc2, self.adc3, self.adc4,
+            self.adc5, self.adc6, self.adc7, self.adc8
+        ]      
 
     def _createInputIndicator(self, frame: Frame, row: int, column: int, text: str):
         group = Frame(frame)
-        indicator = Canvas(group, width=30, height=30)
+        indicator = Canvas(group, width=25, height=25)
         indicator.pack(side='left')
-        indicator.create_oval(5, 5, 30, 30, fill='red', tags=('indicator'))
+        indicator.create_oval(5, 5, 25, 25, fill='red', tags=('indicator'))
         text = Label(group, text=text, font=("Arial", 15), width=10)
         text.pack(side='right')
         group.grid(row=row, column=column)
         return indicator
-
-        
     
     def _initOutputGrid(self):
         frame = Frame(self.outputFrame)
         frame.pack(side='top')
         
-        title = Label(frame, text='OUTPUTs', font=("Arial", 25))
+        title = Label(frame, text='OUTPUT', font=("Arial", 20))
         title.grid(row=0, column=2)
 
         btnO1 = Checkbutton(frame, text='Output 01', variable=self.o1Val, onvalue=True, offvalue=False, command=self._updateOutput, font=("Arial", 15), width=10)
@@ -199,10 +245,5 @@ class GUI(object):
         btn22 = Button(frame, text='Deselect All', command=self._disableAllOutputs, font=("Arial", 15), width=10)
         btn22.grid(row=5, column=3, pady=10)
     
-    def _clickOutputCheckbox(self):
-        pass
-    
-    def startLoop(self):
+    def start(self):
         self.window.mainloop()
-
-GUI().startLoop()

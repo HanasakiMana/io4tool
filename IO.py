@@ -29,7 +29,7 @@ class IO4(object):
         prodDesc = device.get('product_string').split(';')
         funcDesc = prodDesc[7].split('_')
 
-        self.boardInfo = f'''Path:         {device.get('path').decode('utf-8')}
+        print(f'''Path:         {device.get('path').decode('utf-8')}
 Vendor Id:    {device.get('vendor_id')}
 Product Id:   {device.get('product_id')}
 Serial Num:   {device.get('serial_number')}
@@ -49,22 +49,21 @@ ADC Inputs:              0x{list(filter(lambda x: 'ADIN' in x, funcDesc))[0].spl
 Rotary Inputs:           0x{list(filter(lambda x: 'ROTIN' in x, funcDesc))[0].split('=')[-1]}
 Switch Inputs:           0x{list(filter(lambda x: 'SWIN' in x, funcDesc))[0].split('=')[-1]}
 Unique Function:         0x{list(filter(lambda x: 'UQ' in x, funcDesc))[0].split('=')[-1]}
-'''
+''')
 
         # create hid object
         self.device = hid.Device(path=device.get('path'))
 
+
     def readReport(self):
-        report = self.device.read(64)
-        self.reportId = report[0]
-        self.adcs = report[1:17]
-        self.spinners = report[17:25]
-        self.chutes = report[25:29]
-        self.buttons = report[29:33]
-        self.sysStat = report[33]
-        self.usbStat = report[34]
-        uqInput = report[35:]
-        assert len(uqInput) == 29
+            report = self.device.read(64)
+            self.reportId = report[0]
+            self.adcs = report[1:17]
+            self.spinners = report[17:25]
+            self.chutes = report[25:29]
+            self.buttons = report[29:33]
+            self.sysStat = report[33]
+            self.usbStat = report[34]
 
     def changeOutput(self, output: OUTPUT, status: bool):
         # 15257 uses 3 bytes to describe all outputs, and other 59 bytes are just padding

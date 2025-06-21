@@ -1,4 +1,4 @@
-import os
+import os, sys
 import ctypes
 import atexit
 import enum
@@ -22,9 +22,13 @@ library_paths = (
 
 for lib in library_paths:
     try:
-        # using absolute path to load lib correctly
+        # add a path bofore filename to load lib correctly
         # hidapi = ctypes.cdll.LoadLibrary(lib)
-        hidapi = ctypes.cdll.LoadLibrary(os.path.abspath(lib))
+        if getattr(sys, 'frozen', False): # whether is running in bundle
+            basePath = sys._MEIPASS
+        else:
+            basePath = os.path.abspath(".")
+        hidapi = ctypes.cdll.LoadLibrary(os.path.join(basePath, 'lib', lib))
         break
     except OSError:
         pass
