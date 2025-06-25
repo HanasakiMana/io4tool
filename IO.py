@@ -22,8 +22,7 @@ class IO4(object):
         if len(devices) == 0:
             raise ConnectionError("No devices found, please check the connection!")
         elif len(devices) > 1:
-            raise ConnectionError(f"Found {len(devices)} devices, please make sure connect only 1 device at a time!")
-
+            print("Multiple devices found, only the first device will be used.")
         # get device info
         device = devices[0]
         prodDesc = device.get('product_string').split(';')
