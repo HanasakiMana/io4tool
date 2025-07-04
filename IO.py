@@ -18,41 +18,42 @@ class IO4(object):
 
     def __init__(self):
         devices = hid.enumerate(vid=0x0ca3, pid=0x0021)
-        # assert device connection
-        if len(devices) == 0:
-            raise ConnectionError("No devices found, please check the connection!")
-        elif len(devices) > 1:
-            print("Multiple devices found, only the first device will be used.")
-        # get device info
-        device = devices[0]
-        prodDesc = device.get('product_string').split(';')
-        funcDesc = prodDesc[7].split('_')
+        self.device = None
+        self.getDevice()
+        
 
-        print(f'''Path:         {device.get('path').decode('utf-8')}
-Vendor Id:    {device.get('vendor_id')}
-Product Id:   {device.get('product_id')}
-Serial Num:   {device.get('serial_number')}
-Release Num:  {device.get('release_number')}
-Manufacturer: {device.get('manufacturer_string')}
-Product Description:
-Board Type:          {prodDesc[0]}
-Board Number:        {prodDesc[1]}
-Board Sub Number:    {prodDesc[2]}
-Firmware Revision:   {prodDesc[3]}
-Firmware CheckSum:   {prodDesc[4]}
-Output MOSFET Model: {prodDesc[5]}
-Configuration:       {prodDesc[6]}
-Functions:
-General-purpose Outputs: 0x{list(filter(lambda x: 'GOUT' in x, funcDesc))[0].split('=')[-1]}
-ADC Inputs:              0x{list(filter(lambda x: 'ADIN' in x, funcDesc))[0].split('=')[-1]}
-Rotary Inputs:           0x{list(filter(lambda x: 'ROTIN' in x, funcDesc))[0].split('=')[-1]}
-Switch Inputs:           0x{list(filter(lambda x: 'SWIN' in x, funcDesc))[0].split('=')[-1]}
-Unique Function:         0x{list(filter(lambda x: 'UQ' in x, funcDesc))[0].split('=')[-1]}
-''')
+    def getDevice(self):
+        # get device connection
+        devices = hid.enumerate(vid=0x0ca3, pid=0x0021)
+        if devices:
+            # get device info
+            device: dict = devices[0]
+            self.device = hid.Device(path=device.get('path'))
+            
+            prodDesc = device.get('product_string').split(';')
+            funcDesc = prodDesc[7].split('_')
 
-        # create hid object
-        self.device = hid.Device(path=device.get('path'))
-
+            print(f'''Path:         {device.get('path').decode('utf-8')}
+    Vendor Id:    {device.get('vendor_id')}
+    Product Id:   {device.get('product_id')}
+    Serial Num:   {device.get('serial_number')}
+    Release Num:  {device.get('release_number')}
+    Manufacturer: {device.get('manufacturer_string')}
+    Product Description:
+    Board Type:          {prodDesc[0]}
+    Board Number:        {prodDesc[1]}
+    Board Sub Number:    {prodDesc[2]}
+    Firmware Revision:   {prodDesc[3]}
+    Firmware CheckSum:   {prodDesc[4]}
+    Output MOSFET Model: {prodDesc[5]}
+    Configuration:       {prodDesc[6]}
+    Functions:
+    General-purpose Outputs: 0x{list(filter(lambda x: 'GOUT' in x, funcDesc))[0].split('=')[-1]}
+    ADC Inputs:              0x{list(filter(lambda x: 'ADIN' in x, funcDesc))[0].split('=')[-1]}
+    Rotary Inputs:           0x{list(filter(lambda x: 'ROTIN' in x, funcDesc))[0].split('=')[-1]}
+    Switch Inputs:           0x{list(filter(lambda x: 'SWIN' in x, funcDesc))[0].split('=')[-1]}
+    Unique Function:         0x{list(filter(lambda x: 'UQ' in x, funcDesc))[0].split('=')[-1]}
+    ''')
 
     def readReport(self):
             report = self.device.read(64)

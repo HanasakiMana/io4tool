@@ -45,3 +45,21 @@ exe = EXE(
     entitlements_file=None,
     icon=['favicon.ico'],
 )
+
+app = BUNDLE(exe,
+        name='IO4Tool.app',
+        icon='icon.icns',
+        bundle_identifier=None,
+        version='1.0.1',
+        info_plist={
+            'NSPrincipalClass': 'NSApplication',
+            'NSAppleScriptEnabled': False,
+            'CFBundleDocumentTypes': [
+                {
+                    'CFBundleTypeName': 'IO4Tool',
+                    'CFBundleTypeIconFile': 'icon.icns',
+                    'LSItemContentTypes': ['com.mana.io4tool']
+                }
+            ]
+        },
+    )

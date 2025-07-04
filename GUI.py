@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import *
+from tkinter import messagebox
 import os, sys
 from IO import IO4
 from const import *
@@ -29,8 +30,18 @@ class GUI(object):
         self._initOutputGrid()
 
         self.io = IO4()
+        while not self.io.device: # no device founded
+            self._noConnectMessagebox()
+            self.io.getDevice()
+        
         self.window.after(10, self._updateInputs)
 
+    def _noConnectMessagebox(self):
+        messagebox.showwarning(
+            title='No device found',
+            message='No IO4-like device found, please check the connection and lick OK.'
+        )
+    
     def _initVaribles(self):
         self.o1Val = BooleanVar()
         self.o2Val = BooleanVar()

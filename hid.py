@@ -169,6 +169,7 @@ class Device(object):
     def __init__(self, vid=None, pid=None, serial=None, path=None):
         if path:
             self.__dev = hidapi.hid_open_path(path)
+            print('get device from path:', self.__dev)
         elif serial:
             serial = ctypes.create_unicode_buffer(serial)
             self.__dev = hidapi.hid_open(vid, pid, serial)
