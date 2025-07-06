@@ -2,18 +2,25 @@ import tkinter as tk
 from tkinter import *
 from tkinter import messagebox
 import os, sys
+import threading, time
+
 from IO import IO4
 from const import *
 
 class GUI(object):
 
     def __init__(self):
+        # vars for output effects
+        self.startOutputEffect: bool = False
+        self.outputEffectThread: threading.Thread = None
+        
+        # main window
         self.window = Tk()
         self.window.title(appName)
         self.window.geometry(defaultSize) # size of window
         self.window.resizable(False, False)
 
-        if getattr(sys, 'frozen', False): # whether is running in bundle
+        if getattr(sys, 'frozen', False): # whether is running in bundle packed by pyinstaller
             base_path = sys._MEIPASS
         else:
             base_path = os.path.abspath(".")
@@ -29,8 +36,9 @@ class GUI(object):
         self._initInputGrid()
         self._initOutputGrid()
 
+        # start io4 handler
         self.io = IO4()
-        while not self.io.device: # no device founded
+        while not self.io.device: # show messagebox if no device found
             self._noConnectMessagebox()
             self.io.getDevice()
         
@@ -39,7 +47,7 @@ class GUI(object):
     def _noConnectMessagebox(self):
         messagebox.showwarning(
             title='No device found',
-            message='No IO4-like device found, please check the connection and lick OK.'
+            message='No IO4-like device found, please check the connection and click OK.'
         )
     
     def _initVaribles(self):
@@ -63,8 +71,6 @@ class GUI(object):
         self.o18Val = BooleanVar()
         self.o19Val = BooleanVar()
         self.o20Val = BooleanVar()
-        self.o21Val = BooleanVar()
-        self.o22Val = BooleanVar()
 
         self.outputVar = [
             self.o1Val, self.o2Val, self.o3Val, self.o4Val, self.o5Val, 
@@ -73,6 +79,7 @@ class GUI(object):
             self.o16Val, self.o17Val, self.o18Val, self.o19Val, self.o20Val
         ]
 
+    # ---------- I/O Control ----------
     def _updateInputs(self):
         self.io.readReport()
         # digital inputs
@@ -86,7 +93,7 @@ class GUI(object):
             self.adcs[i].configure(text=format(self.io.adcs[i*2] + (self.io.adcs[i*2+1] << 8), '04X'))
         self.window.after(8, self._updateInputs)
     
-    def _updateOutput(self):
+    def _updateOutputs(self):
         for i in range(len(self.outputVar)):
             self.io.changeOutput(outputs[i], self.outputVar[i].get())
         self.io.sendReport()
@@ -102,6 +109,54 @@ class GUI(object):
             var.set(0)
             self.io.changeAllOutputs(False)
             self.io.sendReport()
+
+    # ---------- Output Effect ----------
+    def flowOutputs(self):
+        while self.startOutputEffect:
+            for i in range(len(outputs)):
+                if not self.startOutputEffect:
+                    break
+                self.outputVar[i].set(1)
+                self._updateOutputs()
+                time.sleep(0.1)
+            for i in range(len(outputs)):
+                if not self.startOutputEffect:
+                    break
+                self.outputVar[i].set(0)
+                self._updateOutputs()
+                time.sleep(0.1)
+            self._disableAllOutputs()
+    
+    def alternatingOutputs(self):
+        toggle = False
+        while self.startOutputEffect:
+            for i in range(len(outputs)):
+                if not self.startOutputEffect:
+                    break
+                if i % 2:
+                    self.outputVar[i].set(toggle)
+                else:
+                    self.outputVar[i].set(not toggle)
+            self._updateOutputs()
+            toggle = not toggle
+            time.sleep(1)
+        self._disableAllOutputs()
+
+    
+    def _startFlow(self):
+        if not self.startOutputEffect: # whether another output effect exists
+            self.startOutputEffect = True
+            self.outputEffectThread = threading.Thread(target=self.flowOutputs)
+            self.outputEffectThread.start()
+
+    def _startAlternating(self):
+        if not self.startOutputEffect: # whether another output effect exists
+            self.startOutputEffect = True
+            self.outputEffectThread = threading.Thread(target=self.alternatingOutputs)
+            self.outputEffectThread.start()
+    
+    def _stopOutputEffect(self):
+        self.startOutputEffect = False
     
     
     def _initInputGrid(self):
@@ -210,51 +265,57 @@ class GUI(object):
         title = Label(frame, text='OUTPUT', font=("Arial", 20))
         title.grid(row=0, column=2)
 
-        btnO1 = Checkbutton(frame, text='Output 01', variable=self.o1Val, onvalue=True, offvalue=False, command=self._updateOutput, font=("Arial", 15), width=10)
+        btnO1 = Checkbutton(frame, text='Output 01', variable=self.o1Val, onvalue=True, offvalue=False, command=self._updateOutputs, font=("Arial", 15), width=10)
         btnO1.grid(row=1, column=0)
-        btnO2 = Checkbutton(frame, text='Output 02', variable=self.o2Val, onvalue=True, offvalue=False, command=self._updateOutput, font=("Arial", 15), width=10)
+        btnO2 = Checkbutton(frame, text='Output 02', variable=self.o2Val, onvalue=True, offvalue=False, command=self._updateOutputs, font=("Arial", 15), width=10)
         btnO2.grid(row=1, column=1)
-        btnO3 = Checkbutton(frame, text='Output 03', variable=self.o3Val, onvalue=True, offvalue=False, command=self._updateOutput, font=("Arial", 15), width=10)
+        btnO3 = Checkbutton(frame, text='Output 03', variable=self.o3Val, onvalue=True, offvalue=False, command=self._updateOutputs, font=("Arial", 15), width=10)
         btnO3.grid(row=1, column=2)
-        btnO4 = Checkbutton(frame, text='Output 04', variable=self.o4Val, onvalue=True, offvalue=False, command=self._updateOutput, font=("Arial", 15), width=10)
+        btnO4 = Checkbutton(frame, text='Output 04', variable=self.o4Val, onvalue=True, offvalue=False, command=self._updateOutputs, font=("Arial", 15), width=10)
         btnO4.grid(row=1, column=3)
-        btnO5 = Checkbutton(frame, text='Output 05', variable=self.o5Val, onvalue=True, offvalue=False, command=self._updateOutput, font=("Arial", 15), width=10)
+        btnO5 = Checkbutton(frame, text='Output 05', variable=self.o5Val, onvalue=True, offvalue=False, command=self._updateOutputs, font=("Arial", 15), width=10)
         btnO5.grid(row=1, column=4)
-        btnO6 = Checkbutton(frame, text='Output 06', variable=self.o6Val, onvalue=True, offvalue=False, command=self._updateOutput, font=("Arial", 15), width=10)
+        btnO6 = Checkbutton(frame, text='Output 06', variable=self.o6Val, onvalue=True, offvalue=False, command=self._updateOutputs, font=("Arial", 15), width=10)
         btnO6.grid(row=2, column=0)
-        btnO7 = Checkbutton(frame, text='Output 07', variable=self.o7Val, onvalue=True, offvalue=False, command=self._updateOutput, font=("Arial", 15), width=10)
+        btnO7 = Checkbutton(frame, text='Output 07', variable=self.o7Val, onvalue=True, offvalue=False, command=self._updateOutputs, font=("Arial", 15), width=10)
         btnO7.grid(row=2, column=1)
-        btnO8 = Checkbutton(frame, text='Output 08', variable=self.o8Val, onvalue=True, offvalue=False, command=self._updateOutput, font=("Arial", 15), width=10)
+        btnO8 = Checkbutton(frame, text='Output 08', variable=self.o8Val, onvalue=True, offvalue=False, command=self._updateOutputs, font=("Arial", 15), width=10)
         btnO8.grid(row=2, column=2)
-        btnO9 = Checkbutton(frame, text='Output 09', variable=self.o9Val, onvalue=True, offvalue=False, command=self._updateOutput, font=("Arial", 15), width=10)
+        btnO9 = Checkbutton(frame, text='Output 09', variable=self.o9Val, onvalue=True, offvalue=False, command=self._updateOutputs, font=("Arial", 15), width=10)
         btnO9.grid(row=2, column=3)
-        btnO10 = Checkbutton(frame, text='Output 10', variable=self.o10Val, onvalue=True, offvalue=False, command=self._updateOutput, font=("Arial", 15), width=10)
+        btnO10 = Checkbutton(frame, text='Output 10', variable=self.o10Val, onvalue=True, offvalue=False, command=self._updateOutputs, font=("Arial", 15), width=10)
         btnO10.grid(row=2, column=4)
-        btnO11 = Checkbutton(frame, text='Output 11', variable=self.o11Val, onvalue=True, offvalue=False, command=self._updateOutput, font=("Arial", 15), width=10)
+        btnO11 = Checkbutton(frame, text='Output 11', variable=self.o11Val, onvalue=True, offvalue=False, command=self._updateOutputs, font=("Arial", 15), width=10)
         btnO11.grid(row=3, column=0)
-        btnO12 = Checkbutton(frame, text='Output 12', variable=self.o12Val, onvalue=True, offvalue=False, command=self._updateOutput, font=("Arial", 15), width=10)
+        btnO12 = Checkbutton(frame, text='Output 12', variable=self.o12Val, onvalue=True, offvalue=False, command=self._updateOutputs, font=("Arial", 15), width=10)
         btnO12.grid(row=3, column=1)
-        btnO13 = Checkbutton(frame, text='Output 13', variable=self.o13Val, onvalue=True, offvalue=False, command=self._updateOutput, font=("Arial", 15), width=10)
+        btnO13 = Checkbutton(frame, text='Output 13', variable=self.o13Val, onvalue=True, offvalue=False, command=self._updateOutputs, font=("Arial", 15), width=10)
         btnO13.grid(row=3, column=2)
-        btnO14 = Checkbutton(frame, text='Output 14', variable=self.o14Val, onvalue=True, offvalue=False, command=self._updateOutput, font=("Arial", 15), width=10)
+        btnO14 = Checkbutton(frame, text='Output 14', variable=self.o14Val, onvalue=True, offvalue=False, command=self._updateOutputs, font=("Arial", 15), width=10)
         btnO14.grid(row=3, column=3)
-        btnO15 = Checkbutton(frame, text='Output 15', variable=self.o15Val, onvalue=True, offvalue=False, command=self._updateOutput, font=("Arial", 15), width=10)
+        btnO15 = Checkbutton(frame, text='Output 15', variable=self.o15Val, onvalue=True, offvalue=False, command=self._updateOutputs, font=("Arial", 15), width=10)
         btnO15.grid(row=3, column=4)
-        btnO16 = Checkbutton(frame, text='Output 16', variable=self.o16Val, onvalue=True, offvalue=False, command=self._updateOutput, font=("Arial", 15), width=10)
+        btnO16 = Checkbutton(frame, text='Output 16', variable=self.o16Val, onvalue=True, offvalue=False, command=self._updateOutputs, font=("Arial", 15), width=10)
         btnO16.grid(row=4, column=0)
-        btnO17 = Checkbutton(frame, text='Output 17', variable=self.o17Val, onvalue=True, offvalue=False, command=self._updateOutput, font=("Arial", 15), width=10)
+        btnO17 = Checkbutton(frame, text='Output 17', variable=self.o17Val, onvalue=True, offvalue=False, command=self._updateOutputs, font=("Arial", 15), width=10)
         btnO17.grid(row=4, column=1)
-        btnO18 = Checkbutton(frame, text='Output 18', variable=self.o18Val, onvalue=True, offvalue=False, command=self._updateOutput, font=("Arial", 15), width=10)
+        btnO18 = Checkbutton(frame, text='Output 18', variable=self.o18Val, onvalue=True, offvalue=False, command=self._updateOutputs, font=("Arial", 15), width=10)
         btnO18.grid(row=4, column=2)
-        btnO19 = Checkbutton(frame, text='Output 19', variable=self.o19Val, onvalue=True, offvalue=False, command=self._updateOutput, font=("Arial", 15), width=10)
+        btnO19 = Checkbutton(frame, text='Output 19', variable=self.o19Val, onvalue=True, offvalue=False, command=self._updateOutputs, font=("Arial", 15), width=10)
         btnO19.grid(row=4, column=3)
-        btnO20 = Checkbutton(frame, text='Output 20', variable=self.o20Val, onvalue=True, offvalue=False, command=self._updateOutput, font=("Arial", 15), width=10)
+        btnO20 = Checkbutton(frame, text='Output 20', variable=self.o20Val, onvalue=True, offvalue=False, command=self._updateOutputs, font=("Arial", 15), width=10)
         btnO20.grid(row=4, column=4)
 
         btn21 = Button(frame, text='Select All', command=self._enableAllOutputs, font=("Arial", 15), width=10)
-        btn21.grid(row=5, column=1, pady=10)
+        btn21.grid(row=5, column=3, pady=10)
         btn22 = Button(frame, text='Deselect All', command=self._disableAllOutputs, font=("Arial", 15), width=10)
-        btn22.grid(row=5, column=3, pady=10)
+        btn22.grid(row=5, column=4, pady=10)
+        btn23 = Button(frame, text='Flow', command=self._startFlow, font=("Arial", 15), width=10)
+        btn23.grid(row=5, column=0, pady=10)
+        btn24 = Button(frame, text='Alternating', command=self._startAlternating, font=("Arial", 15), width=10)
+        btn24.grid(row=5, column=1, pady=10)
+        btn25 = Button(frame, text='Stop', command=self._stopOutputEffect, font=("Arial", 15), width=10)
+        btn25.grid(row=5, column=2, pady=10)
     
     def start(self):
         self.window.mainloop()
