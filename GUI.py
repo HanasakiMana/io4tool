@@ -24,7 +24,11 @@ class GUI(object):
             base_path = sys._MEIPASS
         else:
             base_path = os.path.abspath(".")
-        self.window.iconbitmap(os.path.join(base_path, 'favicon.ico'))
+        
+        if sys.platform == 'darwin':
+            self.window.iconbitmap(os.path.join(base_path, 'icon.icns'))
+        else:
+            self.window.iconbitmap(os.path.join(base_path, 'favicon.ico'))
 
         self.inputFrame = Frame(self.window, width=600)
         self.outputFrame = Frame(self.window, width=600)
@@ -142,7 +146,6 @@ class GUI(object):
             time.sleep(1)
         self._disableAllOutputs()
 
-    
     def _startFlow(self):
         if not self.startOutputEffect: # whether another output effect exists
             self.startOutputEffect = True
@@ -158,7 +161,7 @@ class GUI(object):
     def _stopOutputEffect(self):
         self.startOutputEffect = False
     
-    
+    # ---------- 
     def _initInputGrid(self):
 
         frame = Frame(self.inputFrame)

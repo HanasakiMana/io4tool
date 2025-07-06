@@ -11,7 +11,7 @@ a = Analysis([
     pathex=[],
     binaries=[],
     datas=[
-        ('favicon.ico', '.'),
+        ('icon.icns', '.'),
         ('lib/libhidapi.dylib', 'lib')
         ],
     hiddenimports=[],
@@ -43,7 +43,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['favicon.ico'],
+    icon=['icon.icns'],
 )
 
 app = BUNDLE(exe,
